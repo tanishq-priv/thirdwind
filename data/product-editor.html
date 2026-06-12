@@ -1,0 +1,988 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ThirdWind Product Editor</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #05060d;
+        --panel: rgba(255, 255, 255, 0.075);
+        --panel-strong: rgba(255, 255, 255, 0.12);
+        --line: rgba(255, 255, 255, 0.14);
+        --text: #f7f8ff;
+        --muted: rgba(247, 248, 255, 0.58);
+        --soft: rgba(247, 248, 255, 0.38);
+        --cyan: #22d3ee;
+        --violet: #8b5cf6;
+        --green: #5eead4;
+        --red: #fb7185;
+        --radius: 22px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background:
+          radial-gradient(circle at 20% 0%, rgba(139, 92, 246, 0.22), transparent 32rem),
+          radial-gradient(circle at 80% 8%, rgba(34, 211, 238, 0.14), transparent 26rem),
+          #000006;
+        color: var(--text);
+      }
+
+      body::before {
+        position: fixed;
+        inset: 0;
+        z-index: -1;
+        pointer-events: none;
+        content: "";
+        background-image:
+          radial-gradient(circle at 7% 18%, rgba(255,255,255,.9) 0 1px, transparent 1.5px),
+          radial-gradient(circle at 22% 70%, rgba(255,255,255,.7) 0 1px, transparent 1.5px),
+          radial-gradient(circle at 48% 28%, rgba(255,255,255,.85) 0 1px, transparent 1.5px),
+          radial-gradient(circle at 76% 84%, rgba(255,255,255,.75) 0 1px, transparent 1.5px),
+          radial-gradient(circle at 92% 38%, rgba(255,255,255,.9) 0 1px, transparent 1.5px);
+        background-size: 260px 220px;
+        animation: drift 120s linear infinite;
+        opacity: 0.55;
+      }
+
+      @keyframes drift {
+        from { transform: translateX(0); }
+        to { transform: translateX(-260px); }
+      }
+
+      button,
+      input,
+      textarea,
+      select {
+        font: inherit;
+      }
+
+      button {
+        cursor: pointer;
+      }
+
+      .app {
+        width: min(1500px, calc(100% - 28px));
+        margin: 0 auto;
+        padding: 28px 0 44px;
+      }
+
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 18px;
+        align-items: center;
+        margin-bottom: 22px;
+        padding: 16px;
+        border: 1px solid var(--line);
+        border-radius: 28px;
+        background: rgba(4, 6, 14, 0.82);
+        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.42);
+        backdrop-filter: blur(22px);
+      }
+
+      h1,
+      h2,
+      h3 {
+        margin: 0;
+        letter-spacing: -0.03em;
+      }
+
+      h1 {
+        font-size: clamp(28px, 4vw, 52px);
+      }
+
+      p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 10px;
+      }
+
+      .button {
+        min-height: 42px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--panel);
+        color: var(--text);
+        padding: 0 16px;
+        font-weight: 800;
+        transition: 160ms ease;
+      }
+
+      .button:hover {
+        border-color: rgba(34, 211, 238, 0.48);
+        transform: translateY(-1px);
+      }
+
+      .button.primary {
+        border-color: transparent;
+        background: #fff;
+        color: #05060d;
+      }
+
+      .button.danger {
+        border-color: rgba(251, 113, 133, 0.32);
+        color: #fecdd3;
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: 340px 1fr;
+        gap: 20px;
+      }
+
+      .panel {
+        border: 1px solid var(--line);
+        border-radius: 28px;
+        background: rgba(255, 255, 255, 0.07);
+        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+        backdrop-filter: blur(22px);
+      }
+
+      .sidebar {
+        position: sticky;
+        top: 118px;
+        align-self: start;
+        overflow: hidden;
+      }
+
+      .search {
+        padding: 14px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .input,
+      textarea,
+      select {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: rgba(0, 0, 0, 0.32);
+        color: var(--text);
+        padding: 12px 13px;
+        outline: none;
+      }
+
+      .input:focus,
+      textarea:focus,
+      select:focus {
+        border-color: rgba(34, 211, 238, 0.68);
+        box-shadow: 0 0 0 4px rgba(34, 211, 238, 0.08);
+      }
+
+      textarea {
+        min-height: 104px;
+        resize: vertical;
+      }
+
+      .product-list {
+        max-height: calc(100vh - 220px);
+        overflow: auto;
+        padding: 8px;
+      }
+
+      .product-row {
+        display: grid;
+        grid-template-columns: 54px 1fr;
+        gap: 12px;
+        align-items: center;
+        width: 100%;
+        border: 1px solid transparent;
+        border-radius: 18px;
+        background: transparent;
+        color: var(--text);
+        padding: 10px;
+        text-align: left;
+      }
+
+      .product-row.active {
+        border-color: rgba(34, 211, 238, 0.42);
+        background: rgba(34, 211, 238, 0.1);
+      }
+
+      .thumb {
+        display: grid;
+        width: 54px;
+        height: 54px;
+        place-items: center;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: radial-gradient(circle, rgba(34, 211, 238, 0.2), rgba(139, 92, 246, 0.12), rgba(0, 0, 0, 0.35));
+        color: var(--cyan);
+        font-weight: 900;
+      }
+
+      .thumb img,
+      .preview img,
+      .gallery-tile img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+      }
+
+      .row-title {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-weight: 900;
+      }
+
+      .row-meta {
+        display: block;
+        margin-top: 3px;
+        overflow: hidden;
+        color: var(--soft);
+        font-size: 12px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .editor {
+        padding: 22px;
+      }
+
+      .editor-head {
+        display: grid;
+        grid-template-columns: 1fr 260px;
+        gap: 18px;
+        align-items: start;
+        margin-bottom: 22px;
+      }
+
+      .preview {
+        display: grid;
+        min-height: 220px;
+        place-items: center;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        background:
+          radial-gradient(circle at 50% 36%, rgba(34, 211, 238, 0.24), transparent 45%),
+          rgba(0, 0, 0, 0.3);
+      }
+
+      .preview span {
+        color: var(--muted);
+        font-weight: 800;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .field {
+        display: grid;
+        gap: 8px;
+      }
+
+      .field.full {
+        grid-column: 1 / -1;
+      }
+
+      label {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 900;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .hint {
+        color: var(--soft);
+        font-size: 12px;
+      }
+
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        min-height: 42px;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: rgba(0, 0, 0, 0.28);
+        padding: 8px;
+      }
+
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        border: 1px solid rgba(34, 211, 238, 0.24);
+        border-radius: 999px;
+        background: rgba(34, 211, 238, 0.1);
+        color: #cffafe;
+        padding: 6px 10px;
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .chip button {
+        border: 0;
+        background: transparent;
+        color: inherit;
+        padding: 0;
+        font-weight: 900;
+      }
+
+      .chip-input {
+        min-width: 160px;
+        flex: 1;
+        border: 0;
+        background: transparent;
+        color: var(--text);
+        outline: none;
+        padding: 6px;
+      }
+
+      .gallery {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+        gap: 12px;
+      }
+
+      .gallery-tile {
+        position: relative;
+        display: grid;
+        min-height: 110px;
+        place-items: center;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: rgba(0, 0, 0, 0.28);
+      }
+
+      .gallery-tile button {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        width: 28px;
+        height: 28px;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        border-radius: 999px;
+        background: rgba(0, 0, 0, 0.62);
+        color: #fff;
+        font-weight: 900;
+      }
+
+      .status {
+        min-height: 24px;
+        color: var(--green);
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      .status.error {
+        color: var(--red);
+      }
+
+      .hidden {
+        display: none;
+      }
+
+      @media (max-width: 980px) {
+        .topbar,
+        .layout,
+        .editor-head,
+        .grid {
+          grid-template-columns: 1fr;
+        }
+
+        .actions {
+          justify-content: flex-start;
+        }
+
+        .sidebar {
+          position: static;
+        }
+
+        .product-list {
+          max-height: 360px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <header class="topbar">
+        <div>
+          <h1>ThirdWind Product Editor</h1>
+          <p>Edit products, upload images, manage tags, then save or export <strong>products.json</strong>.</p>
+        </div>
+        <div class="actions">
+          <button class="button" id="openJsonBtn" type="button">Open JSON</button>
+          <button class="button primary" id="saveJsonBtn" type="button">Save changes</button>
+          <button class="button" id="downloadJsonBtn" type="button">Download JSON</button>
+          <input class="hidden" id="jsonInput" type="file" accept="application/json,.json" />
+        </div>
+      </header>
+
+      <div class="layout">
+        <aside class="panel sidebar">
+          <div class="search">
+            <input class="input" id="searchInput" type="search" placeholder="Search products, tags, brand..." />
+          </div>
+          <div class="product-list" id="productList"></div>
+        </aside>
+
+        <main class="panel editor">
+          <div class="editor-head">
+            <div>
+              <h2 id="editorTitle">No product selected</h2>
+              <p id="editorSubtitle">Load products.json or add a new product to begin.</p>
+              <div class="actions" style="justify-content: flex-start; margin-top: 16px">
+                <button class="button primary" id="addBtn" type="button">Add product</button>
+                <button class="button" id="duplicateBtn" type="button">Duplicate</button>
+                <button class="button danger" id="deleteBtn" type="button">Delete</button>
+              </div>
+            </div>
+            <div class="preview" id="imagePreview"><span>No image</span></div>
+          </div>
+
+          <div class="status" id="statusText"></div>
+
+          <form id="productForm" class="grid">
+            <div class="field">
+              <label for="name">Product name</label>
+              <input class="input" id="name" name="name" required />
+            </div>
+            <div class="field">
+              <label for="slug">Slug</label>
+              <input class="input" id="slug" name="slug" required />
+              <button class="button" id="slugBtn" type="button">Generate slug</button>
+            </div>
+            <div class="field">
+              <label for="brand">Brand</label>
+              <input class="input" id="brand" name="brand" />
+            </div>
+            <div class="field">
+              <label for="category">Category</label>
+              <select id="category" name="category">
+                <option>Smartphones</option>
+                <option>Laptops</option>
+                <option>Earbuds</option>
+                <option>Smartwatches</option>
+                <option>Tablets</option>
+                <option>Accessories</option>
+                <option>Gaming Gear</option>
+                <option>Smart Home</option>
+                <option>Cameras</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="actualPrice">Actual price</label>
+              <input class="input" id="actualPrice" name="actualPrice" type="number" min="0" step="1" />
+            </div>
+            <div class="field">
+              <label for="discountedPrice">Discounted price</label>
+              <input class="input" id="discountedPrice" name="discountedPrice" type="number" min="0" step="1" />
+            </div>
+            <div class="field">
+              <label for="availability">Availability label</label>
+              <input class="input" id="availability" name="availability" placeholder="In Stock, Preorder, Limited Units..." />
+            </div>
+            <div class="field">
+              <label for="rating">Rating</label>
+              <input class="input" id="rating" name="rating" type="number" min="0" max="5" step="0.1" />
+            </div>
+            <div class="field">
+              <label for="popularity">Popularity</label>
+              <input class="input" id="popularity" name="popularity" type="number" min="0" max="100" step="1" />
+            </div>
+            <div class="field">
+              <label for="releaseDate">Release date</label>
+              <input class="input" id="releaseDate" name="releaseDate" type="date" />
+            </div>
+            <div class="field full">
+              <label for="shortDescription">Short description</label>
+              <textarea id="shortDescription" name="shortDescription"></textarea>
+            </div>
+            <div class="field full">
+              <label for="longDescription">Long description</label>
+              <textarea id="longDescription" name="longDescription"></textarea>
+            </div>
+            <div class="field">
+              <label for="amazonLink">Amazon link</label>
+              <input class="input" id="amazonLink" name="amazonLink" type="url" />
+            </div>
+            <div class="field">
+              <label for="flipkartLink">Flipkart link</label>
+              <input class="input" id="flipkartLink" name="flipkartLink" type="url" />
+            </div>
+            <div class="field full">
+              <label>Tags</label>
+              <div class="chips" id="tagsChips"></div>
+              <p class="hint">Type a tag and press Enter. Use intent tags such as gaming, premium, laptop, deal.</p>
+            </div>
+            <div class="field full">
+              <label>Badges</label>
+              <div class="chips" id="badgesChips"></div>
+              <p class="hint">Examples: New, Best Seller, Limited Deal, Editor's Pick, Premium Choice.</p>
+            </div>
+            <div class="field full">
+              <label>Features / specifications</label>
+              <div class="chips" id="featuresChips"></div>
+              <p class="hint">Each chip becomes one item in the product detail specifications list.</p>
+            </div>
+            <div class="field full">
+              <label for="mainImageInput">Main product image</label>
+              <input class="input" id="image" name="image" placeholder="Image URL or uploaded data URL" />
+              <input class="input" id="mainImageInput" type="file" accept="image/*" />
+              <p class="hint">Uploaded images are stored in JSON as data URLs so the product can render immediately.</p>
+            </div>
+            <div class="field full">
+              <label for="galleryInput">Gallery images</label>
+              <input class="input" id="galleryInput" type="file" accept="image/*" multiple />
+              <div class="gallery" id="galleryGrid"></div>
+            </div>
+          </form>
+        </main>
+      </div>
+    </div>
+
+    <script>
+      const defaults = {
+        name: "",
+        slug: "",
+        category: "Smartphones",
+        image: "",
+        galleryImages: [],
+        actualPrice: 0,
+        discountedPrice: 0,
+        shortDescription: "",
+        longDescription: "",
+        features: [],
+        amazonLink: "",
+        flipkartLink: "",
+        tags: [],
+        availability: "In Stock",
+        badges: [],
+        brand: "",
+        rating: 4.5,
+        popularity: 50,
+        releaseDate: new Date().toISOString().slice(0, 10)
+      };
+
+      let products = [];
+      let selectedIndex = -1;
+      let jsonFileHandle = null;
+      let dirty = false;
+
+      const fields = [
+        "name", "slug", "brand", "category", "image", "actualPrice", "discountedPrice", "availability",
+        "rating", "popularity", "releaseDate", "shortDescription", "longDescription", "amazonLink", "flipkartLink"
+      ];
+
+      const el = (id) => document.getElementById(id);
+
+      function slugify(value) {
+        return String(value || "")
+          .toLowerCase()
+          .replace(/&/g, "and")
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-|-$/g, "");
+      }
+
+      function setStatus(message, type = "ok") {
+        el("statusText").textContent = message;
+        el("statusText").classList.toggle("error", type === "error");
+      }
+
+      function normalizeProduct(product) {
+        return {
+          ...defaults,
+          ...product,
+          galleryImages: Array.isArray(product.galleryImages) ? product.galleryImages : [],
+          features: Array.isArray(product.features) ? product.features : [],
+          tags: Array.isArray(product.tags) ? product.tags : [],
+          badges: Array.isArray(product.badges) ? product.badges : [],
+          actualPrice: Number(product.actualPrice || 0),
+          discountedPrice: Number(product.discountedPrice || 0),
+          rating: product.rating === "" || product.rating == null ? undefined : Number(product.rating),
+          popularity: Number(product.popularity || 0)
+        };
+      }
+
+      function selectedProduct() {
+        return products[selectedIndex] || null;
+      }
+
+      function markDirty() {
+        dirty = true;
+      }
+
+      function renderList() {
+        const query = el("searchInput").value.trim().toLowerCase();
+        const list = el("productList");
+        list.innerHTML = "";
+
+        products.forEach((product, index) => {
+          const haystack = [product.name, product.brand, product.category, product.slug, ...product.tags, ...product.badges].join(" ").toLowerCase();
+          if (query && !haystack.includes(query)) return;
+
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = `product-row ${index === selectedIndex ? "active" : ""}`;
+          button.onclick = () => {
+            saveFormToState();
+            selectedIndex = index;
+            render();
+          };
+
+          const thumb = document.createElement("span");
+          thumb.className = "thumb";
+          if (product.image && product.image.startsWith("data:image/")) {
+            thumb.innerHTML = `<img alt="" src="${product.image}" />`;
+          } else {
+            thumb.textContent = (product.name || "?").slice(0, 1).toUpperCase();
+          }
+
+          const meta = document.createElement("span");
+          meta.innerHTML = `<span class="row-title">${escapeHtml(product.name || "Untitled product")}</span><span class="row-meta">${escapeHtml(product.brand || "No brand")} - ${escapeHtml(product.category || "No category")}</span>`;
+          button.append(thumb, meta);
+          list.appendChild(button);
+        });
+      }
+
+      function renderForm() {
+        const product = selectedProduct();
+        const disabled = !product;
+
+        fields.forEach((field) => {
+          const input = el(field);
+          input.disabled = disabled;
+          input.value = product && product[field] != null ? product[field] : "";
+        });
+
+        el("editorTitle").textContent = product ? product.name || "Untitled product" : "No product selected";
+        el("editorSubtitle").textContent = product ? `${product.category} - ${product.slug || "missing slug"}` : "Load products.json or add a new product to begin.";
+        renderChips("tagsChips", product ? product.tags : [], "tags");
+        renderChips("badgesChips", product ? product.badges : [], "badges");
+        renderChips("featuresChips", product ? product.features : [], "features");
+        renderGallery();
+        renderPreview();
+      }
+
+      function renderPreview() {
+        const product = selectedProduct();
+        const preview = el("imagePreview");
+        const src = product && product.image;
+        if (src && (src.startsWith("data:image/") || src.startsWith("http://") || src.startsWith("https://") || src.startsWith("/"))) {
+          preview.innerHTML = `<img alt="${escapeHtml(product.name)} preview" src="${src}" />`;
+        } else {
+          preview.innerHTML = `<span>No image</span>`;
+        }
+      }
+
+      function renderChips(containerId, values, key) {
+        const container = el(containerId);
+        container.innerHTML = "";
+
+        values.forEach((value, index) => {
+          const chip = document.createElement("span");
+          chip.className = "chip";
+          chip.innerHTML = `${escapeHtml(value)} <button type="button" aria-label="Remove">x</button>`;
+          chip.querySelector("button").onclick = () => {
+            const product = selectedProduct();
+            product[key].splice(index, 1);
+            markDirty();
+            render();
+          };
+          container.appendChild(chip);
+        });
+
+        const input = document.createElement("input");
+        input.className = "chip-input";
+        input.placeholder = key === "features" ? "Add specification..." : "Add item...";
+        input.onkeydown = (event) => {
+          if (event.key === "Enter" || event.key === ",") {
+            event.preventDefault();
+            const value = input.value.trim();
+            const product = selectedProduct();
+            if (value && product && !product[key].includes(value)) {
+              product[key].push(value);
+              input.value = "";
+              markDirty();
+              render();
+            }
+          }
+        };
+        input.disabled = !selectedProduct();
+        container.appendChild(input);
+      }
+
+      function renderGallery() {
+        const product = selectedProduct();
+        const gallery = el("galleryGrid");
+        gallery.innerHTML = "";
+        if (!product) return;
+
+        product.galleryImages.forEach((src, index) => {
+          const tile = document.createElement("div");
+          tile.className = "gallery-tile";
+          tile.innerHTML = src.startsWith("data:image/") || src.startsWith("http") || src.startsWith("/")
+            ? `<img alt="Gallery image ${index + 1}" src="${src}" />`
+            : `<span class="hint">${escapeHtml(src)}</span>`;
+          const remove = document.createElement("button");
+          remove.type = "button";
+          remove.textContent = "x";
+          remove.onclick = () => {
+            product.galleryImages.splice(index, 1);
+            markDirty();
+            render();
+          };
+          tile.appendChild(remove);
+          gallery.appendChild(tile);
+        });
+      }
+
+      function render() {
+        renderList();
+        renderForm();
+      }
+
+      function saveFormToState() {
+        const product = selectedProduct();
+        if (!product) return;
+
+        fields.forEach((field) => {
+          const value = el(field).value;
+          if (["actualPrice", "discountedPrice", "popularity"].includes(field)) {
+            product[field] = Number(value || 0);
+          } else if (field === "rating") {
+            product[field] = value === "" ? undefined : Number(value);
+          } else {
+            product[field] = value;
+          }
+        });
+      }
+
+      function addProduct(seed = {}) {
+        saveFormToState();
+        const product = normalizeProduct({
+          ...defaults,
+          ...seed,
+          name: seed.name || "New Product",
+          slug: uniqueSlug(seed.slug || "new-product")
+        });
+        products.unshift(product);
+        selectedIndex = 0;
+        markDirty();
+        render();
+        setStatus("New product added.");
+      }
+
+      function uniqueSlug(base) {
+        let slug = slugify(base) || "product";
+        let next = slug;
+        let count = 2;
+        while (products.some((product) => product.slug === next)) {
+          next = `${slug}-${count++}`;
+        }
+        return next;
+      }
+
+      async function fileToDataUrl(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      }
+
+      async function loadProductsFromFile(file) {
+        const text = await file.text();
+        const parsed = JSON.parse(text);
+        if (!Array.isArray(parsed)) throw new Error("products.json must contain an array.");
+        products = parsed.map(normalizeProduct);
+        selectedIndex = products.length ? 0 : -1;
+        dirty = false;
+        render();
+        setStatus(`Loaded ${products.length} products from ${file.name}.`);
+      }
+
+      async function tryAutoLoad() {
+        try {
+          const response = await fetch("products.json", { cache: "no-store" });
+          if (!response.ok) throw new Error("products.json not served.");
+          products = (await response.json()).map(normalizeProduct);
+          selectedIndex = products.length ? 0 : -1;
+          dirty = false;
+          render();
+          setStatus(`Auto-loaded ${products.length} products.`);
+        } catch {
+          products = [];
+          selectedIndex = -1;
+          render();
+          setStatus("Open products.json to begin. Auto-load works when this page is served from the data folder.", "error");
+        }
+      }
+
+      function getJsonText() {
+        saveFormToState();
+        return JSON.stringify(products.map(normalizeProduct), null, 2) + "\n";
+      }
+
+      async function saveJson() {
+        const json = getJsonText();
+
+        if ("showSaveFilePicker" in window) {
+          try {
+            if (!jsonFileHandle) {
+              jsonFileHandle = await window.showSaveFilePicker({
+                suggestedName: "products.json",
+                types: [{ description: "JSON", accept: { "application/json": [".json"] } }]
+              });
+            }
+            const writable = await jsonFileHandle.createWritable();
+            await writable.write(json);
+            await writable.close();
+            dirty = false;
+            setStatus("Saved products.json successfully.");
+            return;
+          } catch (error) {
+            if (error.name === "AbortError") return;
+            setStatus(`Save failed: ${error.message}`, "error");
+          }
+        }
+
+        downloadJson();
+      }
+
+      function downloadJson() {
+        const blob = new Blob([getJsonText()], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = "products.json";
+        anchor.click();
+        URL.revokeObjectURL(url);
+        dirty = false;
+        setStatus("Downloaded products.json. Replace the existing file with this export.");
+      }
+
+      function escapeHtml(value) {
+        return String(value || "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+      }
+
+      fields.forEach((field) => {
+        el(field).addEventListener("input", () => {
+          saveFormToState();
+          if (field === "name" && !el("slug").value) {
+            selectedProduct().slug = slugify(el("name").value);
+          }
+          markDirty();
+          renderList();
+          renderPreview();
+          el("editorTitle").textContent = selectedProduct() ? selectedProduct().name || "Untitled product" : "No product selected";
+        });
+      });
+
+      el("searchInput").addEventListener("input", renderList);
+      el("openJsonBtn").addEventListener("click", async () => {
+        if ("showOpenFilePicker" in window) {
+          try {
+            const [handle] = await window.showOpenFilePicker({
+              types: [{ description: "JSON", accept: { "application/json": [".json"] } }],
+              multiple: false
+            });
+            jsonFileHandle = handle;
+            const file = await handle.getFile();
+            await loadProductsFromFile(file);
+            return;
+          } catch (error) {
+            if (error.name === "AbortError") return;
+          }
+        }
+        el("jsonInput").click();
+      });
+      el("jsonInput").addEventListener("change", (event) => {
+        const file = event.target.files[0];
+        if (file) loadProductsFromFile(file).catch((error) => setStatus(error.message, "error"));
+      });
+      el("saveJsonBtn").addEventListener("click", saveJson);
+      el("downloadJsonBtn").addEventListener("click", downloadJson);
+      el("addBtn").addEventListener("click", () => addProduct());
+      el("duplicateBtn").addEventListener("click", () => {
+        const product = selectedProduct();
+        if (!product) return;
+        addProduct({ ...product, name: `${product.name} Copy`, slug: uniqueSlug(`${product.slug}-copy`) });
+      });
+      el("deleteBtn").addEventListener("click", () => {
+        const product = selectedProduct();
+        if (!product) return;
+        if (!confirm(`Delete ${product.name || "this product"}?`)) return;
+        products.splice(selectedIndex, 1);
+        selectedIndex = Math.min(selectedIndex, products.length - 1);
+        markDirty();
+        render();
+        setStatus("Product deleted.");
+      });
+      el("slugBtn").addEventListener("click", () => {
+        const product = selectedProduct();
+        if (!product) return;
+        product.slug = uniqueSlug(product.name);
+        el("slug").value = product.slug;
+        markDirty();
+        renderList();
+      });
+      el("mainImageInput").addEventListener("change", async (event) => {
+        const product = selectedProduct();
+        const file = event.target.files[0];
+        if (!product || !file) return;
+        const dataUrl = await fileToDataUrl(file);
+        product.image = dataUrl;
+        product.galleryImages = [dataUrl, ...product.galleryImages.filter((src) => src !== dataUrl)];
+        el("image").value = dataUrl;
+        markDirty();
+        render();
+        setStatus("Main image uploaded into product JSON.");
+      });
+      el("galleryInput").addEventListener("change", async (event) => {
+        const product = selectedProduct();
+        const files = Array.from(event.target.files || []);
+        if (!product || files.length === 0) return;
+        const images = await Promise.all(files.map(fileToDataUrl));
+        product.galleryImages.push(...images);
+        if (!product.image) product.image = images[0];
+        markDirty();
+        render();
+        setStatus(`${images.length} gallery image${images.length === 1 ? "" : "s"} uploaded.`);
+      });
+
+      window.addEventListener("beforeunload", (event) => {
+        if (!dirty) return;
+        event.preventDefault();
+        event.returnValue = "";
+      });
+
+      tryAutoLoad();
+    </script>
+  </body>
+</html>
